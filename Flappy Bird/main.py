@@ -5,11 +5,13 @@ WIDTH,HEIGHT = 288*SCALE,512*SCALE
 window  = pygame.display.set_mode((WIDTH,HEIGHT))
 clock = pygame.time.Clock()
 #constant
-jump_force = 13
-gForce = 50
+jump_force = 12
+gForce = 40
 bg_speed = 40
 bg_speed_multiplier = 3.5
-pole_speed = bg_speed * bg_speed_multiplier
+pipe_speed = bg_speed * bg_speed_multiplier
+pipe_gap = 54 * SCALE #pixel
+
 base_path = os.path.abspath(__file__).removesuffix(os.path.basename(__file__))
 #variable to reset
 gameStart = False
@@ -32,6 +34,16 @@ bird_rect = bird_img.get_rect().inflate(-5,-5)
 bird_center = pygame.Vector2(WIDTH/3,HEIGHT/2)
 bird_vel = pygame.Vector2()
 bird_rect.center = bird_center
+
+pipe = pygame.transform.scale_by(pygame.image.load(base_path+"assets/images/bird-upflap.png").convert(),SCALE)
+pipes = []
+
+def spawn_pipe():
+    pass
+
+def game_over():
+    exit()
+
 def update(dt):
     global bird_vel, bird_center, bird_rect, bg1_rect, bg2_rect, ground_rect1, ground_rect2
     if gameStart:
@@ -56,12 +68,19 @@ def update(dt):
     if ground_rect2.right <= 0:
         ground_rect2.left = ground_rect1.right
 
-    if bird_rect.colliderect(ground_rect1) or bird_rect.colliderect(ground_rect2):
-        bird_rect.bottom = ground_rect1.top
+    if bird_rect.top < 0:
+        bird_rect.top = 0
         bird_vel.y = 0
+        bird_center.y = bird_rect.centery
+
+    if bird_rect.colliderect(ground_rect1) or bird_rect.colliderect(ground_rect2):
+        game_over()
 def draw():
     window.blit(bg1,bg1_rect)
     window.blit(bg2,bg2_rect)
+
+    #draw pipe here
+
     window.blit(ground1,ground_rect1)
     window.blit(ground2,ground_rect2)
 
