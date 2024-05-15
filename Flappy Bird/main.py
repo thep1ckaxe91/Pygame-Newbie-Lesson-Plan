@@ -11,7 +11,7 @@ clock = pygame.time.Clock()
 # constant
 jump_force = 600
 gForce = 1700
-bg_speed = 40
+bg_speed = 50
 bg_speed_multiplier = 3.5
 pipe_speed = bg_speed * bg_speed_multiplier
 pipe_distance = 108 * SCALE  # pixel gap between 2 obstacle
@@ -41,6 +41,7 @@ ground_rect1 = ground1.get_rect()
 ground_rect2 = ground2.get_rect()
 ground_rect1.bottomleft = 0, HEIGHT
 ground_rect2.bottomleft = ground_rect1.bottomright
+ground_x1,ground_x2 = ground_rect1.x, ground_rect2.x
 
 bird_img = [
     pygame.transform.scale_by(
@@ -63,6 +64,11 @@ bird_vel = pygame.Vector2()
 bird_rect.center = bird_center
 bird_anim_cnt = 0
 bird_anim_cd = 0.1
+bird_max_angle = 45 #angle which the bird would rotate
+bird_min_angle = -90
+bird_angle = 0
+bird_rotate_speed = 720 #per sec
+
 pipe_img = pygame.transform.scale_by(
     pygame.image.load(base_path + "assets/images/pipe.png").convert(), SCALE
 )
@@ -88,13 +94,14 @@ score = 0
 
 
 def game_over():
-    global pipes, bird_center, bird_vel, bird_rect, gameStart, score
+    global pipes, bird_center, bird_vel, bird_rect, gameStart, score, bird_angle
     score = 0
     gameStart = False
     pipes = []
     bird_center = pygame.Vector2(WIDTH / 3, HEIGHT / 2)
     bird_vel = pygame.Vector2()
     bird_rect.center = bird_center
+    bird_angle = 0
 
 def draw_score():
     score_str = str(score)
@@ -158,12 +165,17 @@ def update_pipe(dt):
             if pipe_topleft_bottom.x + pipe_img.get_width() <= 0:
                 pipes.pop(0)
 def update(dt):
-    global bird_vel, bird_center, bird_rect, bg1_rect, bg2_rect, ground_rect1, ground_rect2, bird_img_id, bird_anim_cnt
+    global ground_x1, ground_x2, bird_vel, bird_center, bird_rect, bg1_rect, bg2_rect, ground_rect1, bird_angle, ground_rect2, bird_img_id, bird_anim_cnt
     if gameStart:
         bird_vel.y += gForce * dt
         bird_center += bird_vel * dt
         bird_rect.center = bird_center
 
+        if bird_vel.y > 0:
+            bird_angle -= bird_rotate_speed * dt / 2
+        else:
+            bird_angle += bird_rotate_speed * 3 * dt
+        bird_angle = pygame.math.clamp(bird_angle,bird_min_angle,bird_max_angle)
         if bird_rect.colliderect(ground_rect1) or bird_rect.colliderect(ground_rect2):
             game_over()
 
@@ -176,8 +188,10 @@ def update(dt):
     bg1_rect.x -= bg_speed * dt
     bg2_rect.x -= bg_speed * dt
 
-    ground_rect1.x -= bg_speed * bg_speed_multiplier * dt
-    ground_rect2.x -= bg_speed * bg_speed_multiplier * dt
+    ground_x1 -= pipe_speed * dt
+    ground_x2 -= pipe_speed * dt
+    ground_rect1.x = ground_x1
+    ground_rect2.x = ground_x2
 
     if bg1_rect.right <= 0:
         bg1_rect.left = bg2_rect.right
@@ -185,9 +199,10 @@ def update(dt):
         bg2_rect.left = bg1_rect.right
 
     if ground_rect1.right <= 0:
-        ground_rect1.left = ground_rect2.right
+        ground_x1 = ground_rect1.left = ground_rect2.right
+         
     if ground_rect2.right <= 0:
-        ground_rect2.left = ground_rect1.right
+        ground_x2 = ground_rect2.left = ground_rect1.right
 
     if bird_rect.top < 0:
         bird_rect.top = 0
@@ -221,8 +236,8 @@ def draw():
         )
     else:
         draw_score()
-
-    window.blit(bird_img[bird_img_id], bird_rect.inflate(5, 5))
+    bird = pygame.transform.rotate(bird_img[bird_img_id],bird_angle)
+    window.blit(bird, bird_center - pygame.Vector2(bird.get_width()/3,bird.get_height()/2))
 
 
 if __name__ == "__main__":
