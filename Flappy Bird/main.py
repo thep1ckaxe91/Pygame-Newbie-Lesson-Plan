@@ -4,6 +4,7 @@ from typing import List, Union
 from random import randint
 
 pygame.init()
+pygame.mixer.init()
 SCALE = 2
 WIDTH, HEIGHT = 288 * SCALE, 512 * SCALE
 window = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -41,7 +42,7 @@ ground_rect1 = ground1.get_rect()
 ground_rect2 = ground2.get_rect()
 ground_rect1.bottomleft = 0, HEIGHT
 ground_rect2.bottomleft = ground_rect1.bottomright
-ground_x1,ground_x2 = ground_rect1.x, ground_rect2.x
+ground_x1, ground_x2 = ground_rect1.x, ground_rect2.x
 
 bird_img = [
     pygame.transform.scale_by(
@@ -51,7 +52,8 @@ bird_img = [
         pygame.image.load(base_path + "assets/images/bird-midflap.png").convert(), SCALE
     ),
     pygame.transform.scale_by(
-        pygame.image.load(base_path + "assets/images/bird-downflap.png").convert(), SCALE
+        pygame.image.load(base_path + "assets/images/bird-downflap.png").convert(),
+        SCALE,
     ),
     pygame.transform.scale_by(
         pygame.image.load(base_path + "assets/images/bird-midflap.png").convert(), SCALE
@@ -64,10 +66,10 @@ bird_vel = pygame.Vector2()
 bird_rect.center = bird_center
 bird_anim_cnt = 0
 bird_anim_cd = 0.1
-bird_max_angle = 45 #angle which the bird would rotate
+bird_max_angle = 45  # angle which the bird would rotate
 bird_min_angle = -90
 bird_angle = 0
-bird_rotate_speed = 720 #per sec
+bird_rotate_speed = 720  # per sec
 
 pipe_img = pygame.transform.scale_by(
     pygame.image.load(base_path + "assets/images/pipe.png").convert(), SCALE
@@ -84,14 +86,17 @@ for _, __, files in os.walk(base_path + "assets/ui/numbers/"):
     for file in files:
         numbers_img.append(
             pygame.transform.scale_by(
-                pygame.image.load(base_path + "assets/ui/numbers/" + file),
-                SCALE
+                pygame.image.load(base_path + "assets/ui/numbers/" + file), SCALE
             )
         )
-        
+
 number_rect = numbers_img[0].get_rect()
 score = 0
 
+#sfx
+wing_sfx = pygame.mixer.Sound(base_path + "assets/sfx/wing.wav")
+hit_sfx = pygame.mixer.Sound(base_path + "assets/sfx/hit.wav")
+point_sfx = pygame.mixer.Sound(base_path + "assets/sfx/point.wav")
 
 def game_over():
     global pipes, bird_center, bird_vel, bird_rect, gameStart, score, bird_angle
@@ -102,16 +107,21 @@ def game_over():
     bird_vel = pygame.Vector2()
     bird_rect.center = bird_center
     bird_angle = 0
+    hit_sfx.play()
+
 
 def draw_score():
     score_str = str(score)
-    score_surf = pygame.Surface((len(score_str)*number_rect.w,number_rect.h),pygame.SRCALPHA)
-    cnt=0
+    score_surf = pygame.Surface(
+        (len(score_str) * number_rect.w, number_rect.h), pygame.SRCALPHA
+    )
+    cnt = 0
     for num in score_str:
         index = int(num)
-        score_surf.blit(numbers_img[index],(number_rect.w*cnt,0))
-        cnt+=1
-    window.blit(score_surf,(WIDTH//2-score_surf.get_width()//2,5*SCALE))
+        score_surf.blit(numbers_img[index], (number_rect.w * cnt, 0))
+        cnt += 1
+    window.blit(score_surf, (WIDTH // 2 - score_surf.get_width() // 2, 5 * SCALE))
+
 
 def spawn_pipe():
     global pipes
@@ -136,12 +146,10 @@ def spawn_pipe():
             )
         )
 
+
 def update_pipe(dt):
     global score
-    if (
-        len(pipes) == 0
-        or pipes[-1].x <= WIDTH - pipe_distance - pipe_img.get_width()
-    ):
+    if len(pipes) == 0 or pipes[-1].x <= WIDTH - pipe_distance - pipe_img.get_width():
         spawn_pipe()
 
     if len(pipes) > 0:
@@ -150,8 +158,10 @@ def update_pipe(dt):
 
             if 0 <= bird_rect.left - pipe_topleft_bottom.x <= pipe_speed * dt:
                 score += 1
+                point_sfx.play()
 
-            if bird_rect.collidelist(
+            if (
+                bird_rect.collidelist(
                     [
                         pipe_rect.move(pipe_topleft_bottom),
                         pipe_rect.move(
@@ -159,11 +169,15 @@ def update_pipe(dt):
                             - pygame.Vector2(0, pipe_gap + pipe_rect.h)
                         ),
                     ]
-                ) != -1:
+                )
+                != -1
+            ):
                 game_over()
 
             if pipe_topleft_bottom.x + pipe_img.get_width() <= 0:
                 pipes.pop(0)
+
+
 def update(dt):
     global ground_x1, ground_x2, bird_vel, bird_center, bird_rect, bg1_rect, bg2_rect, ground_rect1, bird_angle, ground_rect2, bird_img_id, bird_anim_cnt
     if gameStart:
@@ -175,7 +189,7 @@ def update(dt):
             bird_angle -= bird_rotate_speed * dt / 2
         else:
             bird_angle += bird_rotate_speed * 3 * dt
-        bird_angle = pygame.math.clamp(bird_angle,bird_min_angle,bird_max_angle)
+        bird_angle = pygame.math.clamp(bird_angle, bird_min_angle, bird_max_angle)
         if bird_rect.colliderect(ground_rect1) or bird_rect.colliderect(ground_rect2):
             game_over()
 
@@ -200,7 +214,7 @@ def update(dt):
 
     if ground_rect1.right <= 0:
         ground_x1 = ground_rect1.left = ground_rect2.right
-         
+
     if ground_rect2.right <= 0:
         ground_x2 = ground_rect2.left = ground_rect1.right
 
@@ -236,8 +250,10 @@ def draw():
         )
     else:
         draw_score()
-    bird = pygame.transform.rotate(bird_img[bird_img_id],bird_angle)
-    window.blit(bird, bird_center - pygame.Vector2(bird.get_width()/3,bird.get_height()/2))
+    bird = pygame.transform.rotate(bird_img[bird_img_id], bird_angle)
+    window.blit(
+        bird, bird_center - pygame.Vector2(bird.get_width() / 3, bird.get_height() / 2)
+    )
 
 
 if __name__ == "__main__":
@@ -251,6 +267,7 @@ if __name__ == "__main__":
                 if event.key in [pygame.K_SPACE, pygame.K_w, pygame.K_UP]:
                     gameStart = 1
                     bird_vel.y = -jump_force
+                    wing_sfx.play()
 
         update(clock.tick(60) / 1000)
         draw()
