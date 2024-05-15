@@ -32,7 +32,8 @@ target_color = pygame.Color("red")
 
 
 def reset():
-    global input_direction, bodies
+    global input_direction, bodies, start
+    start = False
     input_direction = pygame.Vector2()
     bodies = [
         [
